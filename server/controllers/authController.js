@@ -81,3 +81,15 @@ export const getMe = asyncHandler(async (req, res) => {
     data: req.user,
   });
 });
+
+// @route  GET /auth/google/callback
+// Runs after Passport's GoogleStrategy verify callback has already
+// found/created the user and attached it to req.user (session: false,
+// so nothing is stored server-side). We just issue our own JWT cookie
+// and hand the user back to the frontend.
+export const googleCallback = asyncHandler(async (req, res) => {
+  sendTokenCookie(res, req.user._id);
+
+  const clientUrl = process.env.CLIENT_URL.split(",")[0].trim();
+  res.redirect(`${clientUrl}/auth/success`);
+});
