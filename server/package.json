@@ -1,0 +1,21 @@
+{
+  "name": "simple-storage-app-server",
+  "version": "1.0.0",
+  "description": "A simplified cloud storage backend (Express + Mongoose + Cloudinary + JWT/Google OAuth)",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0",
+    "dotenv": "^17.2.3",
+    "mongoose": "^8.15.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}
