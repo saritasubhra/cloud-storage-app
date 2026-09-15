@@ -17,6 +17,22 @@ export const errorHandler = (err, req, res, next) => {
     message = `An account with this ${field} already exists`;
   }
 
+  // Multer errors (file too large, unexpected field, etc.)
+  if (err.name === "MulterError") {
+    statusCode = 400;
+    if (err.code === "LIMIT_FILE_SIZE") {
+      message = `File is too large. Max allowed size is ${process.env.MAX_FILE_SIZE_MB || 25}MB`;
+    } else {
+      message = err.message;
+    }
+  }
+
+  // Unsupported file type, thrown from middlewares/multer.js's fileFilter
+  if (err.message && err.message.startsWith("File type")) {
+    statusCode = 400;
+    message = err.message;
+  }
+
   // Malformed ObjectId passed in a route param
   if (err.name === "CastError") {
     statusCode = 400;

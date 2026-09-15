@@ -3,12 +3,14 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+
 import passport from "passport";
 
 import { connectDB } from "./config/db.js";
 import "./config/passport.js"; // registers the Google strategy with passport
 import authRoutes from "./routes/authRoutes.js";
 import directoryRoutes from "./routes/directoryRoutes.js";
+import fileRoutes from "./routes/fileRoutes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 
 // Connect to MongoDB before starting the server
@@ -54,6 +56,7 @@ app.get("/", (req, res) => {
 // Routes
 app.use("/auth", authRoutes);
 app.use("/directories", directoryRoutes);
+app.use("/files", fileRoutes);
 
 // Global error handler (must be registered after all routes)
 app.use(errorHandler);
