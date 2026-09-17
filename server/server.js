@@ -11,6 +11,7 @@ import "./config/passport.js"; // registers the Google strategy with passport
 import authRoutes from "./routes/authRoutes.js";
 import directoryRoutes from "./routes/directoryRoutes.js";
 import fileRoutes from "./routes/fileRoutes.js";
+import searchRoutes from "./routes/searchRoutes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 
 // Connect to MongoDB before starting the server
@@ -57,6 +58,7 @@ app.get("/", (req, res) => {
 app.use("/auth", authRoutes);
 app.use("/directories", directoryRoutes);
 app.use("/files", fileRoutes);
+app.use("/search", searchRoutes);
 
 // Global error handler (must be registered after all routes)
 app.use(errorHandler);
