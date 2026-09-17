@@ -2,7 +2,10 @@ import path from "path";
 import Directory from "../models/Directory.js";
 import File from "../models/File.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinaryUpload.js";
+import {
+  uploadToCloudinary,
+  deleteFromCloudinary,
+} from "../utils/cloudinaryUpload.js";
 import { getCloudinaryResourceType } from "../utils/resourceType.js";
 import cloudinary from "../config/cloudinary.js";
 
@@ -22,7 +25,10 @@ export const uploadFile = asyncHandler(async (req, res) => {
 
   // Make sure the target folder exists and belongs to this user
   if (parent) {
-    const parentDir = await Directory.findOne({ _id: parent, owner: req.user._id });
+    const parentDir = await Directory.findOne({
+      _id: parent,
+      owner: req.user._id,
+    });
     if (!parentDir) {
       return res.status(404).json({
         success: false,
@@ -79,6 +85,52 @@ export const downloadFile = asyncHandler(async (req, res) => {
   });
 
   res.redirect(downloadUrl);
+});
+
+// @route  PATCH /files/:id
+// @body   { name?, parent? }  - either or both may be supplied.
+//         Send parent: null explicitly to move a file to the root.
+export const renameOrMoveFile = asyncHandler(async (req, res) => {
+  const file = await File.findOne({ _id: req.params.id, owner: req.user._id });
+
+  if (!file) {
+    return res.status(404).json({
+      success: false,
+      message: "File not found",
+    });
+  }
+
+  if (req.body.name !== undefined) {
+    file.name = req.body.name;
+  }
+
+  // Distinguish "parent not sent" (no move) from "parent: null" (move to root)
+  if ("parent" in req.body) {
+    const { parent } = req.body;
+
+    if (parent) {
+      const parentDir = await Directory.findOne({
+        _id: parent,
+        owner: req.user._id,
+      });
+      if (!parentDir) {
+        return res.status(404).json({
+          success: false,
+          message: "Target folder not found",
+        });
+      }
+    }
+
+    file.parent = parent;
+  }
+
+  await file.save(); // re-runs validation + the unique (owner, parent, name) index check
+
+  res.status(200).json({
+    success: true,
+    message: "File updated successfully",
+    data: file,
+  });
 });
 
 // @route  DELETE /files/:id

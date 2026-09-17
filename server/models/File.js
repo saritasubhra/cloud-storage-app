@@ -57,11 +57,13 @@ const fileSchema = new mongoose.Schema(
       min: [0, "File size cannot be negative"],
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-// Speeds up "list files in this folder for this user" queries
-fileSchema.index({ owner: 1, parent: 1 });
+// Speeds up "list files in this folder for this user" queries, and
+// prevents two files with the same name living in the same folder
+// (matches the same rule enforced on Directory names).
+fileSchema.index({ owner: 1, parent: 1, name: 1 }, { unique: true });
 
 const File = mongoose.model("File", fileSchema);
 
