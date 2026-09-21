@@ -7,6 +7,7 @@ function Button({ children, loading = false, variant = "primary", className = ""
   const variants = {
     primary: "bg-ochre text-paper hover:bg-ochre-dark",
     outline: "border border-moss-light text-ink hover:bg-paper-alt",
+    danger: "bg-rust text-paper hover:bg-rust/90",
   };
 
   return (

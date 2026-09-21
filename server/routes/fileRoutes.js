@@ -1,12 +1,7 @@
 import { Router } from "express";
 import checkAuth from "../middlewares/auth.js";
 import upload from "../middlewares/multer.js";
-import {
-  uploadFile,
-  downloadFile,
-  deleteFile,
-  renameOrMoveFile,
-} from "../controllers/fileController.js";
+import { uploadFile, downloadFile, deleteFile, renameOrMoveFile } from "../controllers/fileController.js";
 
 const router = Router();
 

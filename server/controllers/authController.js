@@ -41,7 +41,7 @@ export const login = asyncHandler(async (req, res) => {
 
   // password has `select: false` on the schema, so it must be explicitly requested
   const user = await User.findOne({ email: email.toLowerCase() }).select(
-    "+password",
+    "+password"
   );
 
   if (!user || !(await user.comparePassword(password))) {

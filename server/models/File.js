@@ -57,7 +57,7 @@ const fileSchema = new mongoose.Schema(
       min: [0, "File size cannot be negative"],
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 // Speeds up "list files in this folder for this user" queries, and

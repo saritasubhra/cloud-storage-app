@@ -43,8 +43,8 @@ passport.use(
       } catch (error) {
         return done(error, null);
       }
-    },
-  ),
+    }
+  )
 );
 
 // NOTE: We deliberately do NOT use passport.serializeUser / deserializeUser

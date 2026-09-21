@@ -23,7 +23,7 @@ router.get(
   passport.authenticate("google", {
     scope: ["profile", "email"],
     session: false,
-  }),
+  })
 );
 
 // Step 2: Google redirects back here with a code; Passport exchanges it,
@@ -35,7 +35,7 @@ router.get(
     session: false,
     failureRedirect: `${(process.env.CLIENT_URL || "").split(",")[0].trim()}/login`,
   }),
-  googleCallback,
+  googleCallback
 );
 
 export default router;

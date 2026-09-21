@@ -3,7 +3,7 @@ import checkAuth from "../middlewares/auth.js";
 import {
   createDirectory,
   getDirectoryContents,
-  renameDirectory,
+  updateDirectory,
   deleteDirectory,
 } from "../controllers/directoryController.js";
 
@@ -14,7 +14,7 @@ router.use(checkAuth);
 
 router.post("/", createDirectory);
 router.get("/", getDirectoryContents);
-router.patch("/:id", renameDirectory);
+router.patch("/:id", updateDirectory);
 router.delete("/:id", deleteDirectory);
 
 export default router;

@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { FolderPlus, Upload } from "lucide-react";
 import Breadcrumbs from "./Breadcrumbs.jsx";
 import DirectoryRow from "./DirectoryRow.jsx";
@@ -7,9 +8,15 @@ import EmptyFolder from "./EmptyFolder.jsx";
 import Loader from "./Loader.jsx";
 import Button from "./Button.jsx";
 import CreateFolderModal from "./CreateFolderModal.jsx";
+import RenameModal from "./RenameModal.jsx";
+import MoveModal from "./MoveModal.jsx";
+import ConfirmDialog from "./ConfirmDialog.jsx";
 import UploadProgressPanel from "./UploadProgressPanel.jsx";
 import { useFileBrowser } from "../hooks/useFileBrowser.js";
 import { useFileUpload } from "../hooks/useFileUpload.js";
+import { deleteDirectoryRequest } from "../api/directoryApi.js";
+import { deleteFileRequest } from "../api/fileApi.js";
+import { getErrorMessage } from "../utils/getErrorMessage.js";
 
 function FileBrowser() {
   const { path, directories, files, loading, currentFolderId, openFolder, goToCrumb, refresh } =
@@ -17,6 +24,8 @@ function FileBrowser() {
 
   const [isCreateFolderOpen, setCreateFolderOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  // { action: "rename" | "move" | "delete", item, itemType: "directory" | "file" }
+  const [activeAction, setActiveAction] = useState(null);
   const fileInputRef = useRef(null);
 
   const { uploads, uploadFiles, dismissUpload } = useFileUpload({ onUploaded: refresh });
@@ -35,6 +44,23 @@ function FileBrowser() {
     setIsDragging(false);
     if (e.dataTransfer.files?.length) {
       uploadFiles(e.dataTransfer.files, currentFolderId);
+    }
+  };
+
+  const closeAction = () => setActiveAction(null);
+
+  const handleDeleteConfirmed = async () => {
+    const { item, itemType } = activeAction;
+    try {
+      const request = itemType === "directory" ? deleteDirectoryRequest : deleteFileRequest;
+      await request(item._id);
+      toast.success(`Deleted "${item.name}"`);
+      refresh();
+      closeAction();
+    } catch (error) {
+      toast.error(
+        getErrorMessage(error, `Couldn't delete the ${itemType === "directory" ? "folder" : "file"}.`)
+      );
     }
   };
 
@@ -83,7 +109,7 @@ function FileBrowser() {
           <span className="flex-1">Name</span>
           <span className="hidden w-20 shrink-0 sm:block">Size</span>
           <span className="w-24 shrink-0">Modified</span>
-          <span className="w-8 shrink-0" aria-hidden="true" />
+          <span className="w-16 shrink-0" aria-hidden="true" />
         </div>
 
         {loading ? (
@@ -95,10 +121,23 @@ function FileBrowser() {
         ) : (
           <div>
             {directories.map((directory) => (
-              <DirectoryRow key={directory._id} directory={directory} onOpen={openFolder} />
+              <DirectoryRow
+                key={directory._id}
+                directory={directory}
+                onOpen={openFolder}
+                onRename={(item) => setActiveAction({ action: "rename", item, itemType: "directory" })}
+                onMove={(item) => setActiveAction({ action: "move", item, itemType: "directory" })}
+                onDelete={(item) => setActiveAction({ action: "delete", item, itemType: "directory" })}
+              />
             ))}
             {files.map((file) => (
-              <FileRow key={file._id} file={file} />
+              <FileRow
+                key={file._id}
+                file={file}
+                onRename={(item) => setActiveAction({ action: "rename", item, itemType: "file" })}
+                onMove={(item) => setActiveAction({ action: "move", item, itemType: "file" })}
+                onDelete={(item) => setActiveAction({ action: "delete", item, itemType: "file" })}
+              />
             ))}
           </div>
         )}
@@ -109,6 +148,39 @@ function FileBrowser() {
           parentId={currentFolderId}
           onClose={() => setCreateFolderOpen(false)}
           onCreated={refresh}
+        />
+      )}
+
+      {activeAction?.action === "rename" && (
+        <RenameModal
+          item={activeAction.item}
+          itemType={activeAction.itemType}
+          onClose={closeAction}
+          onRenamed={refresh}
+        />
+      )}
+
+      {activeAction?.action === "move" && (
+        <MoveModal
+          item={activeAction.item}
+          itemType={activeAction.itemType}
+          currentParentId={currentFolderId}
+          onClose={closeAction}
+          onMoved={refresh}
+        />
+      )}
+
+      {activeAction?.action === "delete" && (
+        <ConfirmDialog
+          title={`Delete ${activeAction.itemType === "directory" ? "folder" : "file"}`}
+          message={
+            activeAction.itemType === "directory"
+              ? `"${activeAction.item.name}" and everything inside it will be permanently deleted. This can't be undone.`
+              : `"${activeAction.item.name}" will be permanently deleted. This can't be undone.`
+          }
+          confirmLabel="Delete"
+          onClose={closeAction}
+          onConfirm={handleDeleteConfirmed}
         />
       )}
 

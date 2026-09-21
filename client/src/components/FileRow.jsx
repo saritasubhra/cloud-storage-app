@@ -4,8 +4,9 @@ import { getFileIcon } from "../utils/getFileIcon.js";
 import { formatBytes } from "../utils/formatBytes.js";
 import { formatDate } from "../utils/formatDate.js";
 import { getFileDownloadUrl } from "../api/fileApi.js";
+import RowMenu from "./RowMenu.jsx";
 
-function FileRow({ file }) {
+function FileRow({ file, onRename, onMove, onDelete }) {
   // getFileIcon always returns one of a fixed set of lucide components
   // (a stable reference, not a new component per render) - useMemo just
   // makes that explicit for the linter and future readers.
@@ -21,16 +22,23 @@ function FileRow({ file }) {
         {formatBytes(file.size)}
       </span>
       <span className="w-24 shrink-0 text-sm text-ink-soft">{formatDate(file.createdAt)}</span>
-      <a
-        href={getFileDownloadUrl(file._id)}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`Download ${file.name}`}
-        title="Download"
-        className="w-8 shrink-0 rounded-sm p-1.5 text-ink-soft transition-colors hover:bg-paper-alt hover:text-ochre-dark"
-      >
-        <Download size={16} strokeWidth={1.75} />
-      </a>
+      <div className="flex w-16 shrink-0 items-center justify-end gap-0.5">
+        <a
+          href={getFileDownloadUrl(file._id)}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Download ${file.name}`}
+          title="Download"
+          className="rounded-sm p-1.5 text-ink-soft transition-colors hover:bg-paper-alt hover:text-ochre-dark"
+        >
+          <Download size={16} strokeWidth={1.75} />
+        </a>
+        <RowMenu
+          onRename={() => onRename(file)}
+          onMove={() => onMove(file)}
+          onDelete={() => onDelete(file)}
+        />
+      </div>
     </div>
   );
 }

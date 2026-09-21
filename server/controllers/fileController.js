@@ -2,10 +2,7 @@ import path from "path";
 import Directory from "../models/Directory.js";
 import File from "../models/File.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import {
-  uploadToCloudinary,
-  deleteFromCloudinary,
-} from "../utils/cloudinaryUpload.js";
+import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinaryUpload.js";
 import { getCloudinaryResourceType } from "../utils/resourceType.js";
 import cloudinary from "../config/cloudinary.js";
 
@@ -25,10 +22,7 @@ export const uploadFile = asyncHandler(async (req, res) => {
 
   // Make sure the target folder exists and belongs to this user
   if (parent) {
-    const parentDir = await Directory.findOne({
-      _id: parent,
-      owner: req.user._id,
-    });
+    const parentDir = await Directory.findOne({ _id: parent, owner: req.user._id });
     if (!parentDir) {
       return res.status(404).json({
         success: false,
@@ -109,10 +103,7 @@ export const renameOrMoveFile = asyncHandler(async (req, res) => {
     const { parent } = req.body;
 
     if (parent) {
-      const parentDir = await Directory.findOne({
-        _id: parent,
-        owner: req.user._id,
-      });
+      const parentDir = await Directory.findOne({ _id: parent, owner: req.user._id });
       if (!parentDir) {
         return res.status(404).json({
           success: false,
