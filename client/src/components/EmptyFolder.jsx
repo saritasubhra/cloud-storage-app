@@ -7,7 +7,7 @@ function EmptyFolder() {
       <div>
         <p className="font-medium text-ink">This folder is empty</p>
         <p className="mt-1 text-sm text-ink-soft">
-          Files and folders you add here will show up in this list.
+          Drag files in, or use Upload / New folder above to get started.
         </p>
       </div>
     </div>

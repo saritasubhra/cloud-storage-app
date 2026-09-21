@@ -10,11 +10,23 @@ export const errorHandler = (err, req, res, next) => {
       .join(", ");
   }
 
-  // Mongoose duplicate key error (e.g. email unique constraint)
+  // Mongoose duplicate key error (e.g. unique index violations)
   if (err.code === 11000) {
     statusCode = 409;
-    const field = Object.keys(err.keyValue || {})[0];
-    message = `An account with this ${field} already exists`;
+    const keys = Object.keys(err.keyValue || {});
+
+    if (keys.includes("email")) {
+      message = "An account with this email already exists";
+    } else if (keys.includes("name")) {
+      // Directory/File unique index on (owner, parent, name)
+      message = `"${err.keyValue.name}" already exists in this location`;
+    } else if (keys.includes("googleId")) {
+      message = "This Google account is already linked to another user";
+    } else if (keys.includes("publicId")) {
+      message = "This file has already been uploaded";
+    } else {
+      message = `A record with this ${keys[0]} already exists`;
+    }
   }
 
   // Multer errors (file too large, unexpected field, etc.)
