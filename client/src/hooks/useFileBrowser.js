@@ -37,6 +37,14 @@ export function useFileBrowser() {
     setPath((prev) => [...prev, { id: directory._id, name: directory.name }]);
   };
 
+  // Used when opening a folder found via search - we don't know its full
+  // ancestor chain (the backend has no "get folder path" endpoint), so
+  // the breadcrumb becomes "My Files / <folder>" rather than the true
+  // nested path. Functionally correct, just a shorter breadcrumb.
+  const jumpToFolder = (directory) => {
+    setPath([ROOT_CRUMB, { id: directory._id, name: directory.name }]);
+  };
+
   // Jump to any point in the breadcrumb trail, discarding everything after it
   const goToCrumb = (index) => {
     setPath((prev) => prev.slice(0, index + 1));
@@ -51,6 +59,7 @@ export function useFileBrowser() {
     loading,
     currentFolderId,
     openFolder,
+    jumpToFolder,
     goToCrumb,
     refresh,
   };

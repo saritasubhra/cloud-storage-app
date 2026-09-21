@@ -5,6 +5,8 @@ import Breadcrumbs from "./Breadcrumbs.jsx";
 import DirectoryRow from "./DirectoryRow.jsx";
 import FileRow from "./FileRow.jsx";
 import EmptyFolder from "./EmptyFolder.jsx";
+import NoSearchResults from "./NoSearchResults.jsx";
+import SearchBar from "./SearchBar.jsx";
 import Loader from "./Loader.jsx";
 import Button from "./Button.jsx";
 import CreateFolderModal from "./CreateFolderModal.jsx";
@@ -14,13 +16,18 @@ import ConfirmDialog from "./ConfirmDialog.jsx";
 import UploadProgressPanel from "./UploadProgressPanel.jsx";
 import { useFileBrowser } from "../hooks/useFileBrowser.js";
 import { useFileUpload } from "../hooks/useFileUpload.js";
+import { useSearch } from "../hooks/useSearch.js";
 import { deleteDirectoryRequest } from "../api/directoryApi.js";
 import { deleteFileRequest } from "../api/fileApi.js";
 import { getErrorMessage } from "../utils/getErrorMessage.js";
 
 function FileBrowser() {
-  const { path, directories, files, loading, currentFolderId, openFolder, goToCrumb, refresh } =
+  const { path, directories, files, loading, currentFolderId, openFolder, jumpToFolder, goToCrumb, refresh } =
     useFileBrowser();
+
+  const [query, setQuery] = useState("");
+  const { results: searchResults, loading: searching, isSearching, refresh: refreshSearch } =
+    useSearch(query);
 
   const [isCreateFolderOpen, setCreateFolderOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -30,7 +37,21 @@ function FileBrowser() {
 
   const { uploads, uploadFiles, dismissUpload } = useFileUpload({ onUploaded: refresh });
 
-  const isEmpty = !loading && directories.length === 0 && files.length === 0;
+  // Which set of items is currently on screen - search results while
+  // there's an active query, otherwise the current folder's contents.
+  const visibleDirectories = isSearching ? searchResults.directories : directories;
+  const visibleFiles = isSearching ? searchResults.files : files;
+  const isLoading = isSearching ? searching : loading;
+  const isEmpty = !isLoading && visibleDirectories.length === 0 && visibleFiles.length === 0;
+
+  const handleOpenDirectory = (directory) => {
+    if (isSearching) {
+      jumpToFolder(directory);
+      setQuery(""); // leave search mode once we've navigated somewhere
+    } else {
+      openFolder(directory);
+    }
+  };
 
   const handleFileInputChange = (e) => {
     if (e.target.files?.length) {
@@ -49,13 +70,16 @@ function FileBrowser() {
 
   const closeAction = () => setActiveAction(null);
 
+  // Refreshes whichever list is currently on screen
+  const refreshVisible = () => (isSearching ? refreshSearch() : refresh());
+
   const handleDeleteConfirmed = async () => {
     const { item, itemType } = activeAction;
     try {
       const request = itemType === "directory" ? deleteDirectoryRequest : deleteFileRequest;
       await request(item._id);
       toast.success(`Deleted "${item.name}"`);
-      refresh();
+      refreshVisible();
       closeAction();
     } catch (error) {
       toast.error(
@@ -67,22 +91,34 @@ function FileBrowser() {
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Breadcrumbs path={path} onNavigate={goToCrumb} />
+        {isSearching ? (
+          <p className="text-sm text-ink-soft">
+            Search results for <span className="font-medium text-ink">"{query}"</span>
+          </p>
+        ) : (
+          <Breadcrumbs path={path} onNavigate={goToCrumb} />
+        )}
 
-        <div className="flex gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-auto"
-            onClick={() => setCreateFolderOpen(true)}
-          >
-            <FolderPlus size={16} />
-            New folder
-          </Button>
-          <Button type="button" className="w-auto" onClick={() => fileInputRef.current?.click()}>
-            <Upload size={16} />
-            Upload
-          </Button>
+        <div className="flex flex-1 items-center justify-end gap-3">
+          <SearchBar value={query} onChange={setQuery} />
+
+          {!isSearching && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-auto"
+                onClick={() => setCreateFolderOpen(true)}
+              >
+                <FolderPlus size={16} />
+                New folder
+              </Button>
+              <Button type="button" className="w-auto" onClick={() => fileInputRef.current?.click()}>
+                <Upload size={16} />
+                Upload
+              </Button>
+            </>
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -95,11 +131,12 @@ function FileBrowser() {
 
       <div
         onDragOver={(e) => {
+          if (isSearching) return;
           e.preventDefault();
           setIsDragging(true);
         }}
         onDragLeave={() => setIsDragging(false)}
-        onDrop={handleDrop}
+        onDrop={isSearching ? undefined : handleDrop}
         className={`mt-6 rounded-sm border transition-colors ${
           isDragging ? "border-ochre bg-paper-alt" : "border-moss-light"
         }`}
@@ -112,25 +149,25 @@ function FileBrowser() {
           <span className="w-16 shrink-0" aria-hidden="true" />
         </div>
 
-        {loading ? (
+        {isLoading ? (
           <div className="py-16">
-            <Loader label="Loading folder…" />
+            <Loader label={isSearching ? "Searching…" : "Loading folder…"} />
           </div>
         ) : isEmpty ? (
-          <EmptyFolder />
+          isSearching ? <NoSearchResults query={query} /> : <EmptyFolder />
         ) : (
           <div>
-            {directories.map((directory) => (
+            {visibleDirectories.map((directory) => (
               <DirectoryRow
                 key={directory._id}
                 directory={directory}
-                onOpen={openFolder}
+                onOpen={handleOpenDirectory}
                 onRename={(item) => setActiveAction({ action: "rename", item, itemType: "directory" })}
                 onMove={(item) => setActiveAction({ action: "move", item, itemType: "directory" })}
                 onDelete={(item) => setActiveAction({ action: "delete", item, itemType: "directory" })}
               />
             ))}
-            {files.map((file) => (
+            {visibleFiles.map((file) => (
               <FileRow
                 key={file._id}
                 file={file}
@@ -156,7 +193,7 @@ function FileBrowser() {
           item={activeAction.item}
           itemType={activeAction.itemType}
           onClose={closeAction}
-          onRenamed={refresh}
+          onRenamed={refreshVisible}
         />
       )}
 
@@ -166,7 +203,7 @@ function FileBrowser() {
           itemType={activeAction.itemType}
           currentParentId={currentFolderId}
           onClose={closeAction}
-          onMoved={refresh}
+          onMoved={refreshVisible}
         />
       )}
 
