@@ -1,31 +1,33 @@
-import { PackageOpen } from "lucide-react";
+import { Navigate, Route, Routes } from "react-router-dom";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import PublicOnlyRoute from "./components/PublicOnlyRoute.jsx";
+import LoginPage from "./pages/LoginPage.jsx";
+import RegisterPage from "./pages/RegisterPage.jsx";
+import GoogleAuthSuccessPage from "./pages/GoogleAuthSuccessPage.jsx";
+import DashboardPage from "./pages/DashboardPage.jsx";
+import NotFoundPage from "./pages/NotFoundPage.jsx";
 
-// Placeholder screen for Step 1 - just confirms the build pipeline
-// (Tailwind theme, fonts, routing, toasts) is wired up correctly.
-// Step 2 replaces this with real routes (login, register, dashboard).
 function App() {
   return (
-    <div className="min-h-screen flex items-center justify-center px-6">
-      <div className="max-w-md text-center">
-        <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-moss-light text-moss">
-          <PackageOpen size={28} strokeWidth={1.75} />
-        </div>
-        <h1 className="text-4xl font-medium tracking-tight text-ink">
-          Depot
-        </h1>
-        <p className="mt-3 text-ink-soft leading-relaxed">
-          Your files, organized. The frontend scaffold is running - routing,
-          Tailwind theme, and fonts are wired up. Auth screens come next.
-        </p>
-        <div className="mt-8 h-px bg-moss-light" />
-        <p className="mt-6 text-sm text-ink-soft">
-          Backend expected at{" "}
-          <code className="rounded bg-paper-alt px-1.5 py-0.5 text-ink">
-            {import.meta.env.VITE_API_BASE_URL || "not set"}
-          </code>
-        </p>
-      </div>
-    </div>
+    <Routes>
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+      {/* Only reachable when logged out */}
+      <Route element={<PublicOnlyRoute />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+      </Route>
+
+      {/* Google OAuth redirects here regardless of prior auth state */}
+      <Route path="/auth/success" element={<GoogleAuthSuccessPage />} />
+
+      {/* Only reachable when logged in */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/dashboard" element={<DashboardPage />} />
+      </Route>
+
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   );
 }
 
