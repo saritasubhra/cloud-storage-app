@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+/* Self-hosted fonts (no external network requests at runtime).
+   Latin subset only, to keep the bundle small. */
+@import "@fontsource/fraunces/latin-400.css";
+@import "@fontsource/fraunces/latin-500.css";
+@import "@fontsource/fraunces/latin-600.css";
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-500.css";
+@import "@fontsource/ibm-plex-sans/latin-600.css";
+
+@theme {
+  /* Color tokens - "ledger" palette */
+  --color-paper: #f7f5ef;
+  --color-paper-alt: #efebe0;
+  --color-ink: #1f2a24;
+  --color-ink-soft: #4b564f;
+  --color-moss: #3f5b4a;
+  --color-moss-light: #dbe3dc;
+  --color-ochre: #c98a2c;
+  --color-ochre-dark: #a86f1f;
+  --color-rust: #b3452f;
+  --color-rust-light: #f3ddd6;
+
+  /* Typography */
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+}
+
+/* Visible keyboard focus, kept consistent across the app */
+:focus-visible {
+  outline: 2px solid var(--color-ochre);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
