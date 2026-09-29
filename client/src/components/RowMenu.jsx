@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { MoreVertical, Pencil, FolderInput, Trash2 } from "lucide-react";
+import {
+  MoreVertical,
+  Share2,
+  Pencil,
+  FolderInput,
+  Trash2,
+} from "lucide-react";
 
-function RowMenu({ onRename, onMove, onDelete }) {
+function RowMenu({ onShare, onRename, onMove, onDelete }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -40,6 +46,17 @@ function RowMenu({ onRename, onMove, onDelete }) {
           role="menu"
           className="absolute right-0 z-10 mt-1 w-40 overflow-hidden rounded-sm border border-moss-light bg-paper shadow-lg"
         >
+          {onShare && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => runAndClose(onShare)}
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-ink hover:bg-paper-alt"
+            >
+              <Share2 size={14} strokeWidth={1.75} />
+              Share
+            </button>
+          )}
           <button
             type="button"
             role="menuitem"

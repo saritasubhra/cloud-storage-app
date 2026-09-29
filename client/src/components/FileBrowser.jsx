@@ -12,6 +12,7 @@ import Button from "./Button.jsx";
 import CreateFolderModal from "./CreateFolderModal.jsx";
 import RenameModal from "./RenameModal.jsx";
 import MoveModal from "./MoveModal.jsx";
+import ShareModal from "./ShareModal.jsx";
 import ConfirmDialog from "./ConfirmDialog.jsx";
 import UploadProgressPanel from "./UploadProgressPanel.jsx";
 import { useFileBrowser } from "../hooks/useFileBrowser.js";
@@ -22,12 +23,25 @@ import { deleteFileRequest } from "../api/fileApi.js";
 import { getErrorMessage } from "../utils/getErrorMessage.js";
 
 function FileBrowser() {
-  const { path, directories, files, loading, currentFolderId, openFolder, jumpToFolder, goToCrumb, refresh } =
-    useFileBrowser();
+  const {
+    path,
+    directories,
+    files,
+    loading,
+    currentFolderId,
+    openFolder,
+    jumpToFolder,
+    goToCrumb,
+    refresh,
+  } = useFileBrowser();
 
   const [query, setQuery] = useState("");
-  const { results: searchResults, loading: searching, isSearching, refresh: refreshSearch } =
-    useSearch(query);
+  const {
+    results: searchResults,
+    loading: searching,
+    isSearching,
+    refresh: refreshSearch,
+  } = useSearch(query);
 
   const [isCreateFolderOpen, setCreateFolderOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -35,14 +49,19 @@ function FileBrowser() {
   const [activeAction, setActiveAction] = useState(null);
   const fileInputRef = useRef(null);
 
-  const { uploads, uploadFiles, dismissUpload } = useFileUpload({ onUploaded: refresh });
+  const { uploads, uploadFiles, dismissUpload } = useFileUpload({
+    onUploaded: refresh,
+  });
 
   // Which set of items is currently on screen - search results while
   // there's an active query, otherwise the current folder's contents.
-  const visibleDirectories = isSearching ? searchResults.directories : directories;
+  const visibleDirectories = isSearching
+    ? searchResults.directories
+    : directories;
   const visibleFiles = isSearching ? searchResults.files : files;
   const isLoading = isSearching ? searching : loading;
-  const isEmpty = !isLoading && visibleDirectories.length === 0 && visibleFiles.length === 0;
+  const isEmpty =
+    !isLoading && visibleDirectories.length === 0 && visibleFiles.length === 0;
 
   const handleOpenDirectory = (directory) => {
     if (isSearching) {
@@ -76,14 +95,18 @@ function FileBrowser() {
   const handleDeleteConfirmed = async () => {
     const { item, itemType } = activeAction;
     try {
-      const request = itemType === "directory" ? deleteDirectoryRequest : deleteFileRequest;
+      const request =
+        itemType === "directory" ? deleteDirectoryRequest : deleteFileRequest;
       await request(item._id);
       toast.success(`Deleted "${item.name}"`);
       refreshVisible();
       closeAction();
     } catch (error) {
       toast.error(
-        getErrorMessage(error, `Couldn't delete the ${itemType === "directory" ? "folder" : "file"}.`)
+        getErrorMessage(
+          error,
+          `Couldn't delete the ${itemType === "directory" ? "folder" : "file"}.`,
+        ),
       );
     }
   };
@@ -93,7 +116,8 @@ function FileBrowser() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         {isSearching ? (
           <p className="text-sm text-ink-soft">
-            Search results for <span className="font-medium text-ink">"{query}"</span>
+            Search results for{" "}
+            <span className="font-medium text-ink">"{query}"</span>
           </p>
         ) : (
           <Breadcrumbs path={path} onNavigate={goToCrumb} />
@@ -113,7 +137,11 @@ function FileBrowser() {
                 <FolderPlus size={16} />
                 New folder
               </Button>
-              <Button type="button" className="w-auto" onClick={() => fileInputRef.current?.click()}>
+              <Button
+                type="button"
+                className="w-auto"
+                onClick={() => fileInputRef.current?.click()}
+              >
                 <Upload size={16} />
                 Upload
               </Button>
@@ -154,7 +182,11 @@ function FileBrowser() {
             <Loader label={isSearching ? "Searching…" : "Loading folder…"} />
           </div>
         ) : isEmpty ? (
-          isSearching ? <NoSearchResults query={query} /> : <EmptyFolder />
+          isSearching ? (
+            <NoSearchResults query={query} />
+          ) : (
+            <EmptyFolder />
+          )
         ) : (
           <div>
             {visibleDirectories.map((directory) => (
@@ -162,18 +194,45 @@ function FileBrowser() {
                 key={directory._id}
                 directory={directory}
                 onOpen={handleOpenDirectory}
-                onRename={(item) => setActiveAction({ action: "rename", item, itemType: "directory" })}
-                onMove={(item) => setActiveAction({ action: "move", item, itemType: "directory" })}
-                onDelete={(item) => setActiveAction({ action: "delete", item, itemType: "directory" })}
+                onRename={(item) =>
+                  setActiveAction({
+                    action: "rename",
+                    item,
+                    itemType: "directory",
+                  })
+                }
+                onMove={(item) =>
+                  setActiveAction({
+                    action: "move",
+                    item,
+                    itemType: "directory",
+                  })
+                }
+                onDelete={(item) =>
+                  setActiveAction({
+                    action: "delete",
+                    item,
+                    itemType: "directory",
+                  })
+                }
               />
             ))}
             {visibleFiles.map((file) => (
               <FileRow
                 key={file._id}
                 file={file}
-                onRename={(item) => setActiveAction({ action: "rename", item, itemType: "file" })}
-                onMove={(item) => setActiveAction({ action: "move", item, itemType: "file" })}
-                onDelete={(item) => setActiveAction({ action: "delete", item, itemType: "file" })}
+                onShare={(item) =>
+                  setActiveAction({ action: "share", item, itemType: "file" })
+                }
+                onRename={(item) =>
+                  setActiveAction({ action: "rename", item, itemType: "file" })
+                }
+                onMove={(item) =>
+                  setActiveAction({ action: "move", item, itemType: "file" })
+                }
+                onDelete={(item) =>
+                  setActiveAction({ action: "delete", item, itemType: "file" })
+                }
               />
             ))}
           </div>
@@ -186,6 +245,10 @@ function FileBrowser() {
           onClose={() => setCreateFolderOpen(false)}
           onCreated={refresh}
         />
+      )}
+
+      {activeAction?.action === "share" && (
+        <ShareModal file={activeAction.item} onClose={closeAction} />
       )}
 
       {activeAction?.action === "rename" && (

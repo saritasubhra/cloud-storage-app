@@ -1,5 +1,6 @@
 import Directory from "../models/Directory.js";
 import File from "../models/File.js";
+import Share from "../models/Share.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { getAllDescendantDirectoryIds } from "../utils/directoryHelpers.js";
 import { deleteFromCloudinary } from "../utils/cloudinaryUpload.js";
@@ -11,7 +12,10 @@ export const createDirectory = asyncHandler(async (req, res) => {
 
   // If a parent is given, make sure it exists and belongs to this user
   if (parent) {
-    const parentDir = await Directory.findOne({ _id: parent, owner: req.user._id });
+    const parentDir = await Directory.findOne({
+      _id: parent,
+      owner: req.user._id,
+    });
     if (!parentDir) {
       return res.status(404).json({
         success: false,
@@ -42,7 +46,10 @@ export const getDirectoryContents = asyncHandler(async (req, res) => {
   const parent = req.query.parent || null;
 
   if (parent) {
-    const parentDir = await Directory.findOne({ _id: parent, owner: req.user._id });
+    const parentDir = await Directory.findOne({
+      _id: parent,
+      owner: req.user._id,
+    });
     if (!parentDir) {
       return res.status(404).json({
         success: false,
@@ -66,7 +73,10 @@ export const getDirectoryContents = asyncHandler(async (req, res) => {
 // @body   { name?, parent? }  - either or both may be supplied.
 //         Send parent: null explicitly to move a folder to the root.
 export const updateDirectory = asyncHandler(async (req, res) => {
-  const directory = await Directory.findOne({ _id: req.params.id, owner: req.user._id });
+  const directory = await Directory.findOne({
+    _id: req.params.id,
+    owner: req.user._id,
+  });
 
   if (!directory) {
     return res.status(404).json({
@@ -91,7 +101,10 @@ export const updateDirectory = asyncHandler(async (req, res) => {
         });
       }
 
-      const targetParent = await Directory.findOne({ _id: parent, owner: req.user._id });
+      const targetParent = await Directory.findOne({
+        _id: parent,
+        owner: req.user._id,
+      });
       if (!targetParent) {
         return res.status(404).json({
           success: false,
@@ -101,8 +114,13 @@ export const updateDirectory = asyncHandler(async (req, res) => {
 
       // A folder can't be moved into one of its own subfolders - that
       // would disconnect it (and everything below it) from the tree.
-      const descendantIds = await getAllDescendantDirectoryIds(directory._id, req.user._id);
-      const isMovingIntoOwnSubtree = descendantIds.some((id) => id.equals(parent));
+      const descendantIds = await getAllDescendantDirectoryIds(
+        directory._id,
+        req.user._id,
+      );
+      const isMovingIntoOwnSubtree = descendantIds.some((id) =>
+        id.equals(parent),
+      );
 
       if (isMovingIntoOwnSubtree) {
         return res.status(400).json({
@@ -128,7 +146,10 @@ export const updateDirectory = asyncHandler(async (req, res) => {
 // Recursively deletes the folder, every nested subfolder, and every
 // file inside any of them (Cloudinary assets included).
 export const deleteDirectory = asyncHandler(async (req, res) => {
-  const directory = await Directory.findOne({ _id: req.params.id, owner: req.user._id });
+  const directory = await Directory.findOne({
+    _id: req.params.id,
+    owner: req.user._id,
+  });
 
   if (!directory) {
     return res.status(404).json({
@@ -137,7 +158,10 @@ export const deleteDirectory = asyncHandler(async (req, res) => {
     });
   }
 
-  const directoryIds = await getAllDescendantDirectoryIds(directory._id, req.user._id);
+  const directoryIds = await getAllDescendantDirectoryIds(
+    directory._id,
+    req.user._id,
+  );
 
   const filesToDelete = await File.find({
     owner: req.user._id,
@@ -147,11 +171,17 @@ export const deleteDirectory = asyncHandler(async (req, res) => {
   // Best-effort cleanup on Cloudinary - a failed remote delete shouldn't
   // block removing the records from our own database.
   await Promise.allSettled(
-    filesToDelete.map((file) => deleteFromCloudinary(file.publicId, file.resourceType))
+    filesToDelete.map((file) =>
+      deleteFromCloudinary(file.publicId, file.resourceType),
+    ),
   );
 
   await File.deleteMany({ owner: req.user._id, parent: { $in: directoryIds } });
-  await Directory.deleteMany({ owner: req.user._id, _id: { $in: directoryIds } });
+  await Share.deleteMany({ file: { $in: filesToDelete.map((f) => f._id) } }); // don't leave dangling public links
+  await Directory.deleteMany({
+    owner: req.user._id,
+    _id: { $in: directoryIds },
+  });
 
   res.status(200).json({
     success: true,

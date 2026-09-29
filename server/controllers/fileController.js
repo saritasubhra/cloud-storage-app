@@ -1,10 +1,14 @@
 import path from "path";
 import Directory from "../models/Directory.js";
 import File from "../models/File.js";
+import Share from "../models/Share.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinaryUpload.js";
+import {
+  uploadToCloudinary,
+  deleteFromCloudinary,
+} from "../utils/cloudinaryUpload.js";
 import { getCloudinaryResourceType } from "../utils/resourceType.js";
-import cloudinary from "../config/cloudinary.js";
+import { getAttachmentUrl } from "../utils/getAttachmentUrl.js";
 
 // @route  POST /files/upload
 // @form   multipart/form-data, field name "file", optional body field "parent"
@@ -22,7 +26,10 @@ export const uploadFile = asyncHandler(async (req, res) => {
 
   // Make sure the target folder exists and belongs to this user
   if (parent) {
-    const parentDir = await Directory.findOne({ _id: parent, owner: req.user._id });
+    const parentDir = await Directory.findOne({
+      _id: parent,
+      owner: req.user._id,
+    });
     if (!parentDir) {
       return res.status(404).json({
         success: false,
@@ -72,11 +79,7 @@ export const downloadFile = asyncHandler(async (req, res) => {
     });
   }
 
-  const downloadUrl = cloudinary.url(file.publicId, {
-    resource_type: file.resourceType,
-    secure: true,
-    flags: "attachment", // tells Cloudinary/browser to download rather than display
-  });
+  const downloadUrl = getAttachmentUrl(file);
 
   res.redirect(downloadUrl);
 });
@@ -103,7 +106,10 @@ export const renameOrMoveFile = asyncHandler(async (req, res) => {
     const { parent } = req.body;
 
     if (parent) {
-      const parentDir = await Directory.findOne({ _id: parent, owner: req.user._id });
+      const parentDir = await Directory.findOne({
+        _id: parent,
+        owner: req.user._id,
+      });
       if (!parentDir) {
         return res.status(404).json({
           success: false,
@@ -136,6 +142,7 @@ export const deleteFile = asyncHandler(async (req, res) => {
   }
 
   await deleteFromCloudinary(file.publicId, file.resourceType);
+  await Share.deleteMany({ file: file._id }); // don't leave dangling public links
   await file.deleteOne();
 
   res.status(200).json({

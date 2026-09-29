@@ -10,6 +10,7 @@ import authRoutes from "./routes/authRoutes.js";
 import directoryRoutes from "./routes/directoryRoutes.js";
 import fileRoutes from "./routes/fileRoutes.js";
 import searchRoutes from "./routes/searchRoutes.js";
+import shareRoutes from "./routes/shareRoutes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 
 const app = express();
@@ -37,7 +38,7 @@ app.use(
       }
     },
     credentials: true,
-  })
+  }),
 );
 
 // Passport - initialized only, no passport.session() since we use JWT cookies
@@ -54,6 +55,7 @@ app.use("/auth", authRoutes);
 app.use("/directories", directoryRoutes);
 app.use("/files", fileRoutes);
 app.use("/search", searchRoutes);
+app.use("/shares", shareRoutes);
 
 // Global error handler (must be registered after all routes)
 app.use(errorHandler);
