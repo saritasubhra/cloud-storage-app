@@ -9,6 +9,7 @@ import {
 } from "../utils/cloudinaryUpload.js";
 import { getCloudinaryResourceType } from "../utils/resourceType.js";
 import { getAttachmentUrl } from "../utils/getAttachmentUrl.js";
+import { hashBuffer } from "../utils/hashBuffer.js";
 
 // @route  POST /files/upload
 // @form   multipart/form-data, field name "file", optional body field "parent"
@@ -23,6 +24,7 @@ export const uploadFile = asyncHandler(async (req, res) => {
   }
 
   const { parent = null } = req.body;
+  const allowDuplicate = req.body.allowDuplicate === "true";
 
   // Make sure the target folder exists and belongs to this user
   if (parent) {
@@ -34,6 +36,39 @@ export const uploadFile = asyncHandler(async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Target folder not found",
+      });
+    }
+  }
+
+  const hash = hashBuffer(req.file.buffer);
+
+  // Content-based duplicate check - catches the same file re-uploaded
+  // under a different name or into a different folder, which the
+  // per-folder unique-name index alone wouldn't catch. We check this
+  // BEFORE uploading to Cloudinary so a rejected/pending duplicate never
+  // costs storage or an API call.
+  if (!allowDuplicate) {
+    const existing = await File.findOne({ owner: req.user._id, hash });
+
+    if (existing) {
+      let location = "My Files";
+      if (existing.parent) {
+        const folder = await Directory.findById(existing.parent);
+        if (folder) location = folder.name;
+      }
+
+      return res.status(409).json({
+        success: false,
+        isDuplicate: true,
+        message: `You already have this file as "${existing.name}" in "${location}"`,
+        data: {
+          existingFile: {
+            _id: existing._id,
+            name: existing.name,
+            location,
+            createdAt: existing.createdAt,
+          },
+        },
       });
     }
   }
@@ -57,6 +92,7 @@ export const uploadFile = asyncHandler(async (req, res) => {
     mimeType: req.file.mimetype,
     extension: path.extname(req.file.originalname),
     size: result.bytes,
+    hash,
   });
 
   res.status(201).json({

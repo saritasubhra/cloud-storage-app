@@ -56,14 +56,24 @@ const fileSchema = new mongoose.Schema(
       required: true,
       min: [0, "File size cannot be negative"],
     },
+    // SHA-256 of the file's contents - lets us detect the same content
+    // re-uploaded anywhere in the user's account, regardless of name/folder.
+    hash: {
+      type: String,
+      required: true,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Speeds up "list files in this folder for this user" queries, and
 // prevents two files with the same name living in the same folder
 // (matches the same rule enforced on Directory names).
 fileSchema.index({ owner: 1, parent: 1, name: 1 }, { unique: true });
+
+// Speeds up "does this user already have a file with this content"
+// lookups (not unique - duplicates are allowed if the user confirms).
+fileSchema.index({ owner: 1, hash: 1 });
 
 const File = mongoose.model("File", fileSchema);
 

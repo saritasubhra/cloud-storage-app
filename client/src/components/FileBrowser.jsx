@@ -49,7 +49,7 @@ function FileBrowser() {
   const [activeAction, setActiveAction] = useState(null);
   const fileInputRef = useRef(null);
 
-  const { uploads, uploadFiles, dismissUpload } = useFileUpload({
+  const { uploads, uploadFiles, dismissUpload, keepDuplicate } = useFileUpload({
     onUploaded: refresh,
   });
 
@@ -284,7 +284,11 @@ function FileBrowser() {
         />
       )}
 
-      <UploadProgressPanel uploads={uploads} onDismiss={dismissUpload} />
+      <UploadProgressPanel
+        uploads={uploads}
+        onDismiss={dismissUpload}
+        onKeepDuplicate={keepDuplicate}
+      />
     </div>
   );
 }

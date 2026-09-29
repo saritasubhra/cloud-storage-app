@@ -1,6 +1,6 @@
-import { CheckCircle2, X, AlertCircle } from "lucide-react";
+import { CheckCircle2, X, AlertCircle, Copy } from "lucide-react";
 
-function UploadProgressPanel({ uploads, onDismiss }) {
+function UploadProgressPanel({ uploads, onDismiss, onKeepDuplicate }) {
   if (uploads.length === 0) return null;
 
   return (
@@ -17,6 +17,9 @@ function UploadProgressPanel({ uploads, onDismiss }) {
               )}
               {upload.status === "error" && (
                 <AlertCircle size={16} className="shrink-0 text-rust" />
+              )}
+              {upload.status === "duplicate" && (
+                <Copy size={16} className="shrink-0 text-ochre-dark" />
               )}
               <span className="truncate">{upload.fileName}</span>
             </span>
@@ -41,6 +44,31 @@ function UploadProgressPanel({ uploads, onDismiss }) {
 
           {upload.status === "error" && (
             <p className="mt-1 text-xs text-rust">{upload.error}</p>
+          )}
+
+          {upload.status === "duplicate" && (
+            <div className="mt-2">
+              <p className="text-xs text-ink-soft">
+                You already have this as "{upload.duplicateInfo.name}" in "
+                {upload.duplicateInfo.location}"
+              </p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => onDismiss(upload.id)}
+                  className="flex-1 rounded-sm border border-moss-light px-2 py-1 text-xs font-medium text-ink hover:bg-paper-alt"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onKeepDuplicate(upload)}
+                  className="flex-1 rounded-sm bg-ochre px-2 py-1 text-xs font-medium text-paper hover:bg-ochre-dark"
+                >
+                  Upload anyway
+                </button>
+              </div>
+            </div>
           )}
         </div>
       ))}
