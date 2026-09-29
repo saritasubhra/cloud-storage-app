@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { FolderPlus, Upload } from "lucide-react";
 import Breadcrumbs from "./Breadcrumbs.jsx";
@@ -7,6 +7,7 @@ import FileRow from "./FileRow.jsx";
 import EmptyFolder from "./EmptyFolder.jsx";
 import NoSearchResults from "./NoSearchResults.jsx";
 import SearchBar from "./SearchBar.jsx";
+import CommandPalette from "./CommandPalette.jsx";
 import Loader from "./Loader.jsx";
 import Button from "./Button.jsx";
 import CreateFolderModal from "./CreateFolderModal.jsx";
@@ -19,7 +20,7 @@ import { useFileBrowser } from "../hooks/useFileBrowser.js";
 import { useFileUpload } from "../hooks/useFileUpload.js";
 import { useSearch } from "../hooks/useSearch.js";
 import { deleteDirectoryRequest } from "../api/directoryApi.js";
-import { deleteFileRequest } from "../api/fileApi.js";
+import { deleteFileRequest, getFileDownloadUrl } from "../api/fileApi.js";
 import { getErrorMessage } from "../utils/getErrorMessage.js";
 
 function FileBrowser() {
@@ -44,6 +45,7 @@ function FileBrowser() {
   } = useSearch(query);
 
   const [isCreateFolderOpen, setCreateFolderOpen] = useState(false);
+  const [isPaletteOpen, setPaletteOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   // { action: "rename" | "move" | "delete", item, itemType: "directory" | "file" }
   const [activeAction, setActiveAction] = useState(null);
@@ -52,6 +54,18 @@ function FileBrowser() {
   const { uploads, uploadFiles, dismissUpload, keepDuplicate } = useFileUpload({
     onUploaded: refresh,
   });
+
+  // Global Cmd/Ctrl+K to open the command palette from anywhere on this page
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen(true);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Which set of items is currently on screen - search results while
   // there's an active query, otherwise the current folder's contents.
@@ -85,6 +99,17 @@ function FileBrowser() {
     if (e.dataTransfer.files?.length) {
       uploadFiles(e.dataTransfer.files, currentFolderId);
     }
+  };
+
+  // Palette folder-jump reuses the same "leave search mode" behavior as
+  // clicking a folder in the main search results (see handleOpenDirectory)
+  const handlePaletteOpenFolder = (directory) => {
+    jumpToFolder(directory);
+    setQuery("");
+  };
+
+  const handlePaletteOpenFile = (file) => {
+    window.open(getFileDownloadUrl(file._id), "_blank", "noopener,noreferrer");
   };
 
   const closeAction = () => setActiveAction(null);
@@ -124,7 +149,11 @@ function FileBrowser() {
         )}
 
         <div className="flex flex-1 items-center justify-end gap-3">
-          <SearchBar value={query} onChange={setQuery} />
+          <SearchBar
+            value={query}
+            onChange={setQuery}
+            onOpenPalette={() => setPaletteOpen(true)}
+          />
 
           {!isSearching && (
             <>
@@ -238,6 +267,16 @@ function FileBrowser() {
           </div>
         )}
       </div>
+
+      {isPaletteOpen && (
+        <CommandPalette
+          onClose={() => setPaletteOpen(false)}
+          onNewFolder={() => setCreateFolderOpen(true)}
+          onUpload={() => fileInputRef.current?.click()}
+          onOpenFolder={handlePaletteOpenFolder}
+          onOpenFile={handlePaletteOpenFile}
+        />
+      )}
 
       {isCreateFolderOpen && (
         <CreateFolderModal
