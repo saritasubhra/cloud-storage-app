@@ -123,14 +123,14 @@ function FileBrowser() {
       const request =
         itemType === "directory" ? deleteDirectoryRequest : deleteFileRequest;
       await request(item._id);
-      toast.success(`Deleted "${item.name}"`);
+      toast.success(`Moved "${item.name}" to trash`);
       refreshVisible();
       closeAction();
     } catch (error) {
       toast.error(
         getErrorMessage(
           error,
-          `Couldn't delete the ${itemType === "directory" ? "folder" : "file"}.`,
+          `Couldn't move the ${itemType === "directory" ? "folder" : "file"} to trash.`,
         ),
       );
     }
@@ -311,13 +311,14 @@ function FileBrowser() {
 
       {activeAction?.action === "delete" && (
         <ConfirmDialog
-          title={`Delete ${activeAction.itemType === "directory" ? "folder" : "file"}`}
+          title={`Move ${activeAction.itemType === "directory" ? "folder" : "file"} to trash`}
           message={
             activeAction.itemType === "directory"
-              ? `"${activeAction.item.name}" and everything inside it will be permanently deleted. This can't be undone.`
-              : `"${activeAction.item.name}" will be permanently deleted. This can't be undone.`
+              ? `"${activeAction.item.name}" and everything inside it will move to Trash. You can restore it within 30 days.`
+              : `"${activeAction.item.name}" will move to Trash. You can restore it within 30 days.`
           }
-          confirmLabel="Delete"
+          confirmLabel="Move to trash"
+          danger={false}
           onClose={closeAction}
           onConfirm={handleDeleteConfirmed}
         />

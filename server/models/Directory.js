@@ -22,12 +22,26 @@ const directorySchema = new mongoose.Schema(
       ref: "Directory",
       default: null,
     },
+    // Soft delete - null means active. See File.js for the full rationale;
+    // the two models follow identical trash semantics.
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-// Prevent two folders with the same name in the same location for the same user
-directorySchema.index({ owner: 1, parent: 1, name: 1 }, { unique: true });
+// Prevent two active folders with the same name in the same location.
+// partialFilterExpression means a trashed folder no longer blocks a new
+// folder (or a restore) from using the same name/location.
+directorySchema.index(
+  { owner: 1, parent: 1, name: 1 },
+  { unique: true, partialFilterExpression: { deletedAt: null } },
+);
+
+// Speeds up the Trash view and the purge job's "older than 30 days" scan
+directorySchema.index({ owner: 1, deletedAt: 1 });
 
 const Directory = mongoose.model("Directory", directorySchema);
 

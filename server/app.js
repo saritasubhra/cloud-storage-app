@@ -11,6 +11,7 @@ import directoryRoutes from "./routes/directoryRoutes.js";
 import fileRoutes from "./routes/fileRoutes.js";
 import searchRoutes from "./routes/searchRoutes.js";
 import shareRoutes from "./routes/shareRoutes.js";
+import trashRoutes from "./routes/trashRoutes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 
 const app = express();
@@ -56,6 +57,7 @@ app.use("/directories", directoryRoutes);
 app.use("/files", fileRoutes);
 app.use("/search", searchRoutes);
 app.use("/shares", shareRoutes);
+app.use("/trash", trashRoutes);
 
 // Global error handler (must be registered after all routes)
 app.use(errorHandler);

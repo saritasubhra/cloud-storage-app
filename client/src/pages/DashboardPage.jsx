@@ -1,6 +1,6 @@
-import { LogOut } from "lucide-react";
+import { LogOut, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Logo from "../components/Logo.jsx";
 import Button from "../components/Button.jsx";
 import FileBrowser from "../components/FileBrowser.jsx";
@@ -21,6 +21,13 @@ function DashboardPage() {
       <header className="flex items-center justify-between border-b border-moss-light px-6 py-4">
         <Logo />
         <div className="flex items-center gap-4">
+          <Link
+            to="/trash"
+            className="flex items-center gap-1.5 text-sm text-ink-soft hover:text-ink"
+          >
+            <Trash2 size={15} strokeWidth={1.75} />
+            Trash
+          </Link>
           <span className="text-sm text-ink-soft">{user?.email}</span>
           <Button variant="outline" className="w-auto" onClick={handleLogout}>
             <LogOut size={16} />

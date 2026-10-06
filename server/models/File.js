@@ -62,18 +62,33 @@ const fileSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    // Soft delete - null means active. A trashed file is hidden from
+    // normal browsing/search but kept around for restore, and is
+    // permanently removed by the purge job after 30 days.
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true },
 );
 
 // Speeds up "list files in this folder for this user" queries, and
-// prevents two files with the same name living in the same folder
-// (matches the same rule enforced on Directory names).
-fileSchema.index({ owner: 1, parent: 1, name: 1 }, { unique: true });
+// prevents two active files with the same name living in the same folder.
+// partialFilterExpression means this uniqueness rule only applies to
+// non-trashed files - a trashed file no longer blocks a new file (or a
+// restore) from using the same name/location.
+fileSchema.index(
+  { owner: 1, parent: 1, name: 1 },
+  { unique: true, partialFilterExpression: { deletedAt: null } },
+);
 
 // Speeds up "does this user already have a file with this content"
 // lookups (not unique - duplicates are allowed if the user confirms).
 fileSchema.index({ owner: 1, hash: 1 });
+
+// Speeds up the Trash view and the purge job's "older than 30 days" scan
+fileSchema.index({ owner: 1, deletedAt: 1 });
 
 const File = mongoose.model("File", fileSchema);
 

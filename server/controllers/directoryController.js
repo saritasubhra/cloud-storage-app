@@ -1,20 +1,20 @@
 import Directory from "../models/Directory.js";
 import File from "../models/File.js";
-import Share from "../models/Share.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { getAllDescendantDirectoryIds } from "../utils/directoryHelpers.js";
-import { deleteFromCloudinary } from "../utils/cloudinaryUpload.js";
 
 // @route  POST /directories
 // @body   { name, parent? }  - parent omitted/null => root-level folder
 export const createDirectory = asyncHandler(async (req, res) => {
   const { name, parent = null } = req.body;
 
-  // If a parent is given, make sure it exists and belongs to this user
+  // If a parent is given, make sure it exists, belongs to this user, and
+  // isn't trashed (you have to restore it first)
   if (parent) {
     const parentDir = await Directory.findOne({
       _id: parent,
       owner: req.user._id,
+      deletedAt: null,
     });
     if (!parentDir) {
       return res.status(404).json({
@@ -41,7 +41,8 @@ export const createDirectory = asyncHandler(async (req, res) => {
 
 // @route  GET /directories?parent=<id>
 // Lists the subfolders and files directly inside the given folder.
-// Omit ?parent to list root-level contents.
+// Omit ?parent to list root-level contents. Trashed items never appear
+// here - see routes/trashRoutes.js for the Trash view.
 export const getDirectoryContents = asyncHandler(async (req, res) => {
   const parent = req.query.parent || null;
 
@@ -49,6 +50,7 @@ export const getDirectoryContents = asyncHandler(async (req, res) => {
     const parentDir = await Directory.findOne({
       _id: parent,
       owner: req.user._id,
+      deletedAt: null,
     });
     if (!parentDir) {
       return res.status(404).json({
@@ -59,8 +61,12 @@ export const getDirectoryContents = asyncHandler(async (req, res) => {
   }
 
   const [directories, files] = await Promise.all([
-    Directory.find({ owner: req.user._id, parent }).sort({ name: 1 }),
-    File.find({ owner: req.user._id, parent }).sort({ name: 1 }),
+    Directory.find({ owner: req.user._id, parent, deletedAt: null }).sort({
+      name: 1,
+    }),
+    File.find({ owner: req.user._id, parent, deletedAt: null }).sort({
+      name: 1,
+    }),
   ]);
 
   res.status(200).json({
@@ -72,10 +78,12 @@ export const getDirectoryContents = asyncHandler(async (req, res) => {
 // @route  PATCH /directories/:id
 // @body   { name?, parent? }  - either or both may be supplied.
 //         Send parent: null explicitly to move a folder to the root.
+// Trashed folders can't be renamed/moved until restored.
 export const updateDirectory = asyncHandler(async (req, res) => {
   const directory = await Directory.findOne({
     _id: req.params.id,
     owner: req.user._id,
+    deletedAt: null,
   });
 
   if (!directory) {
@@ -104,6 +112,7 @@ export const updateDirectory = asyncHandler(async (req, res) => {
       const targetParent = await Directory.findOne({
         _id: parent,
         owner: req.user._id,
+        deletedAt: null,
       });
       if (!targetParent) {
         return res.status(404).json({
@@ -143,12 +152,14 @@ export const updateDirectory = asyncHandler(async (req, res) => {
 });
 
 // @route  DELETE /directories/:id
-// Recursively deletes the folder, every nested subfolder, and every
-// file inside any of them (Cloudinary assets included).
+// Soft delete - moves the folder and everything nested inside it (at any
+// depth) to Trash. Nothing is removed from Cloudinary or the database yet;
+// see routes/trashRoutes.js for restore/delete-forever/auto-purge.
 export const deleteDirectory = asyncHandler(async (req, res) => {
   const directory = await Directory.findOne({
     _id: req.params.id,
     owner: req.user._id,
+    deletedAt: null,
   });
 
   if (!directory) {
@@ -162,29 +173,19 @@ export const deleteDirectory = asyncHandler(async (req, res) => {
     directory._id,
     req.user._id,
   );
+  const now = new Date();
 
-  const filesToDelete = await File.find({
-    owner: req.user._id,
-    parent: { $in: directoryIds },
-  });
-
-  // Best-effort cleanup on Cloudinary - a failed remote delete shouldn't
-  // block removing the records from our own database.
-  await Promise.allSettled(
-    filesToDelete.map((file) =>
-      deleteFromCloudinary(file.publicId, file.resourceType),
-    ),
+  await Directory.updateMany(
+    { _id: { $in: directoryIds } },
+    { $set: { deletedAt: now } },
   );
-
-  await File.deleteMany({ owner: req.user._id, parent: { $in: directoryIds } });
-  await Share.deleteMany({ file: { $in: filesToDelete.map((f) => f._id) } }); // don't leave dangling public links
-  await Directory.deleteMany({
-    owner: req.user._id,
-    _id: { $in: directoryIds },
-  });
+  await File.updateMany(
+    { parent: { $in: directoryIds } },
+    { $set: { deletedAt: now } },
+  );
 
   res.status(200).json({
     success: true,
-    message: "Folder and its contents deleted successfully",
+    message: "Moved to trash",
   });
 });

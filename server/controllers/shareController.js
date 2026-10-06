@@ -11,7 +11,11 @@ const MAX_EXPIRY_DAYS = 365;
 export const createShare = asyncHandler(async (req, res) => {
   const { fileId, password, expiresInDays } = req.body;
 
-  const file = await File.findOne({ _id: fileId, owner: req.user._id });
+  const file = await File.findOne({
+    _id: fileId,
+    owner: req.user._id,
+    deletedAt: null,
+  });
   if (!file) {
     return res.status(404).json({
       success: false,
@@ -82,7 +86,10 @@ export const listShares = asyncHandler(async (req, res) => {
 
 // @route  DELETE /shares/:id  (protected)
 export const revokeShare = asyncHandler(async (req, res) => {
-  const share = await Share.findOne({ _id: req.params.id, owner: req.user._id });
+  const share = await Share.findOne({
+    _id: req.params.id,
+    owner: req.user._id,
+  });
 
   if (!share) {
     return res.status(404).json({
@@ -108,7 +115,7 @@ export const resolvePublicShare = asyncHandler(async (req, res) => {
     .select("+password")
     .populate("file");
 
-  if (!share || !share.file) {
+  if (!share || !share.file || share.file.deletedAt) {
     return res.status(404).json({
       success: false,
       message: "This link is invalid or has been removed",
@@ -147,7 +154,7 @@ export const verifyPublicSharePassword = asyncHandler(async (req, res) => {
     .select("+password")
     .populate("file");
 
-  if (!share || !share.file) {
+  if (!share || !share.file || share.file.deletedAt) {
     return res.status(404).json({
       success: false,
       message: "This link is invalid or has been removed",

@@ -2,7 +2,14 @@ import { useState } from "react";
 import Modal from "./Modal.jsx";
 import Button from "./Button.jsx";
 
-function ConfirmDialog({ title, message, confirmLabel = "Confirm", onClose, onConfirm }) {
+function ConfirmDialog({
+  title,
+  message,
+  confirmLabel = "Confirm",
+  danger = true,
+  onClose,
+  onConfirm,
+}) {
   const [submitting, setSubmitting] = useState(false);
 
   const handleConfirm = async () => {
@@ -21,7 +28,12 @@ function ConfirmDialog({ title, message, confirmLabel = "Confirm", onClose, onCo
         <Button type="button" variant="outline" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="button" variant="danger" loading={submitting} onClick={handleConfirm}>
+        <Button
+          type="button"
+          variant={danger ? "danger" : "primary"}
+          loading={submitting}
+          onClick={handleConfirm}
+        >
           {confirmLabel}
         </Button>
       </div>

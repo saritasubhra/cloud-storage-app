@@ -6,6 +6,7 @@ import RegisterPage from "./pages/RegisterPage.jsx";
 import GoogleAuthSuccessPage from "./pages/GoogleAuthSuccessPage.jsx";
 import SharePage from "./pages/SharePage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
+import TrashPage from "./pages/TrashPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
       {/* Only reachable when logged in */}
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/trash" element={<TrashPage />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />

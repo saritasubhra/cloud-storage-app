@@ -1,12 +1,8 @@
 import path from "path";
 import Directory from "../models/Directory.js";
 import File from "../models/File.js";
-import Share from "../models/Share.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import {
-  uploadToCloudinary,
-  deleteFromCloudinary,
-} from "../utils/cloudinaryUpload.js";
+import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
 import { getCloudinaryResourceType } from "../utils/resourceType.js";
 import { getAttachmentUrl } from "../utils/getAttachmentUrl.js";
 import { hashBuffer } from "../utils/hashBuffer.js";
@@ -26,11 +22,13 @@ export const uploadFile = asyncHandler(async (req, res) => {
   const { parent = null } = req.body;
   const allowDuplicate = req.body.allowDuplicate === "true";
 
-  // Make sure the target folder exists and belongs to this user
+  // Make sure the target folder exists, belongs to this user, and isn't
+  // sitting in the trash (you have to restore it first)
   if (parent) {
     const parentDir = await Directory.findOne({
       _id: parent,
       owner: req.user._id,
+      deletedAt: null,
     });
     if (!parentDir) {
       return res.status(404).json({
@@ -46,9 +44,14 @@ export const uploadFile = asyncHandler(async (req, res) => {
   // under a different name or into a different folder, which the
   // per-folder unique-name index alone wouldn't catch. We check this
   // BEFORE uploading to Cloudinary so a rejected/pending duplicate never
-  // costs storage or an API call.
+  // costs storage or an API call. Trashed files don't count as
+  // duplicates - if your only copy is in the trash, re-uploading is fine.
   if (!allowDuplicate) {
-    const existing = await File.findOne({ owner: req.user._id, hash });
+    const existing = await File.findOne({
+      owner: req.user._id,
+      hash,
+      deletedAt: null,
+    });
 
     if (existing) {
       let location = "My Files";
@@ -104,9 +107,14 @@ export const uploadFile = asyncHandler(async (req, res) => {
 
 // @route  GET /files/:id/download
 // Redirects to a Cloudinary URL that forces the browser to download
-// the file (as opposed to opening/rendering it inline).
+// the file (as opposed to opening/rendering it inline). Trashed files
+// aren't downloadable until restored.
 export const downloadFile = asyncHandler(async (req, res) => {
-  const file = await File.findOne({ _id: req.params.id, owner: req.user._id });
+  const file = await File.findOne({
+    _id: req.params.id,
+    owner: req.user._id,
+    deletedAt: null,
+  });
 
   if (!file) {
     return res.status(404).json({
@@ -123,8 +131,13 @@ export const downloadFile = asyncHandler(async (req, res) => {
 // @route  PATCH /files/:id
 // @body   { name?, parent? }  - either or both may be supplied.
 //         Send parent: null explicitly to move a file to the root.
+// Trashed files can't be renamed/moved until restored.
 export const renameOrMoveFile = asyncHandler(async (req, res) => {
-  const file = await File.findOne({ _id: req.params.id, owner: req.user._id });
+  const file = await File.findOne({
+    _id: req.params.id,
+    owner: req.user._id,
+    deletedAt: null,
+  });
 
   if (!file) {
     return res.status(404).json({
@@ -145,6 +158,7 @@ export const renameOrMoveFile = asyncHandler(async (req, res) => {
       const parentDir = await Directory.findOne({
         _id: parent,
         owner: req.user._id,
+        deletedAt: null,
       });
       if (!parentDir) {
         return res.status(404).json({
@@ -167,8 +181,16 @@ export const renameOrMoveFile = asyncHandler(async (req, res) => {
 });
 
 // @route  DELETE /files/:id
+// Soft delete - moves the file to Trash rather than removing it right
+// away. It's hidden from normal browsing/search immediately, but the
+// Cloudinary asset and database record stick around for 30 days in case
+// you want it back (see routes/trashRoutes.js for restore/delete-forever).
 export const deleteFile = asyncHandler(async (req, res) => {
-  const file = await File.findOne({ _id: req.params.id, owner: req.user._id });
+  const file = await File.findOne({
+    _id: req.params.id,
+    owner: req.user._id,
+    deletedAt: null,
+  });
 
   if (!file) {
     return res.status(404).json({
@@ -177,12 +199,11 @@ export const deleteFile = asyncHandler(async (req, res) => {
     });
   }
 
-  await deleteFromCloudinary(file.publicId, file.resourceType);
-  await Share.deleteMany({ file: file._id }); // don't leave dangling public links
-  await file.deleteOne();
+  file.deletedAt = new Date();
+  await file.save();
 
   res.status(200).json({
     success: true,
-    message: "File deleted successfully",
+    message: "Moved to trash",
   });
 });

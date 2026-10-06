@@ -22,10 +22,14 @@ export const search = asyncHandler(async (req, res) => {
   const [directories, files] = await Promise.all([
     type === "file"
       ? []
-      : Directory.find({ owner, name: nameRegex }).sort({ name: 1 }),
+      : Directory.find({ owner, name: nameRegex, deletedAt: null }).sort({
+          name: 1,
+        }),
     type === "directory"
       ? []
-      : File.find({ owner, name: nameRegex }).sort({ name: 1 }),
+      : File.find({ owner, name: nameRegex, deletedAt: null }).sort({
+          name: 1,
+        }),
   ]);
 
   res.status(200).json({

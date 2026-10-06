@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/api/index.js" }
-  ]
+  "rewrites": [{ "source": "/(.*)", "destination": "/api/index.js" }],
+  "crons": [{ "path": "/trash/purge-expired", "schedule": "0 3 1 * *" }]
 }
